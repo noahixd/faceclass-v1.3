@@ -297,6 +297,14 @@ def create_user(payload: UserIn, user=Depends(allow("admin", "teacher"))):
 def enroll(course_id: str, student_id: str, user=Depends(allow("admin", "teacher"))):
     try:
         with db() as connection:
+            course = connection.execute("SELECT teacher_id FROM courses WHERE id=?", (course_id,)).fetchone()
+            if not course:
+                raise HTTPException(404, "COURSE_NOT_FOUND")
+            if user["role"] == "teacher" and course["teacher_id"] != user["id"]:
+                raise HTTPException(403, "FORBIDDEN")
+            student = connection.execute("SELECT role,active FROM users WHERE id=?", (student_id,)).fetchone()
+            if not student or student["role"] != "student" or not student["active"]:
+                raise HTTPException(404, "STUDENT_NOT_FOUND")
             connection.execute("INSERT INTO enrollments VALUES(?,?)", (course_id, student_id))
     except sqlite3.IntegrityError:
         raise HTTPException(409, "ALREADY_ENROLLED")
@@ -305,6 +313,11 @@ def enroll(course_id: str, student_id: str, user=Depends(allow("admin", "teacher
 @app.delete("/courses/{course_id}/students/{student_id}", status_code=204)
 def unenroll(course_id: str, student_id: str, user=Depends(allow("admin", "teacher"))):
     with db() as connection:
+        course = connection.execute("SELECT teacher_id FROM courses WHERE id=?", (course_id,)).fetchone()
+        if not course:
+            raise HTTPException(404, "COURSE_NOT_FOUND")
+        if user["role"] == "teacher" and course["teacher_id"] != user["id"]:
+            raise HTTPException(403, "FORBIDDEN")
         result = connection.execute("DELETE FROM enrollments WHERE course_id=? AND student_id=?", (course_id, student_id))
         if not result.rowcount:
             raise HTTPException(404, "ENROLLMENT_NOT_FOUND")

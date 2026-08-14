@@ -307,6 +307,22 @@ function App({
       setNotice(labelError(e));
     }
   }
+  async function enroll(id: string) {
+    if (!courseId) {
+      setNotice("กรุณาเลือกรายวิชาก่อนเพิ่มนักศึกษา");
+      return;
+    }
+    try {
+      await request(`/courses/${courseId}/students/${id}`, token, {
+        method: "POST",
+        body: "{}",
+      });
+      await Promise.all([loadDash(), loadReports()]);
+      setNotice("เพิ่มนักศึกษาเข้ารายวิชาเรียบร้อยแล้ว");
+    } catch (e) {
+      setNotice(labelError(e));
+    }
+  }
   const present = dash?.students.filter((s) => s.attendance).length || 0,
     total = dash?.students.length || 0,
     rate = total ? Math.round((present / total) * 100) : 0;
@@ -412,7 +428,10 @@ function App({
                 enrolled={dash?.students || []}
                 query={query}
                 setQuery={setQuery}
+                enroll={enroll}
                 unenroll={unenroll}
+                course={dash?.course || null}
+                notice={notice}
               />
             )}{" "}
             {section === "courses" && (
@@ -874,26 +893,47 @@ function Students({
   enrolled,
   query,
   setQuery,
+  enroll,
   unenroll,
+  course,
+  notice,
 }: {
   students: Student[];
   enrolled: Student[];
   query: string;
   setQuery: (v: string) => void;
+  enroll: (id: string) => void;
   unenroll: (id: string) => void;
+  course: Course | null;
+  notice: string;
 }) {
   const enrolledIds = new Set(enrolled.map((s) => s.id));
   return (
     <>
       <div className="searchRow">
-        <input
-          aria-label="ค้นหานักศึกษา"
-          placeholder="ค้นหาชื่อหรือรหัสนักศึกษา…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <span>{students.length} รายการ</span>
+        <div>
+          <input
+            aria-label="ค้นหานักศึกษา"
+            placeholder="ค้นหาชื่อหรือรหัสนักศึกษา…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <small>
+            กำลังจัดรายชื่อเข้า{" "}
+            {course
+              ? `${course.code} — ${course.name}`
+              : "ยังไม่ได้เลือกรายวิชา"}
+          </small>
+        </div>
+        <span>
+          {enrolled.length}/{students.length} คนในวิชา
+        </span>
       </div>
+      {notice && (
+        <div className="studentActionNotice" role="status" aria-live="polite">
+          {notice}
+        </div>
+      )}
       <section className="studentGrid">
         {students.map((s) => (
           <article className="studentCard" key={s.id}>
@@ -910,9 +950,17 @@ function Students({
                 {s.photo_url ? "● FACE REGISTERED" : "○ NO FACE PROFILE"}
               </span>
             </div>
-            {enrolledIds.has(s.id) && (
+            {enrolledIds.has(s.id) ? (
               <button className="danger" onClick={() => unenroll(s.id)}>
                 นำออกจากวิชา
+              </button>
+            ) : (
+              <button
+                className="enrollButton"
+                onClick={() => enroll(s.id)}
+                disabled={!course}
+              >
+                + เพิ่มเข้าวิชา
               </button>
             )}
           </article>
@@ -1411,6 +1459,9 @@ function labelError(e: unknown) {
         ALL_STUDENTS_PRESENT: "นักศึกษาทุกคนเช็คชื่อแล้ว",
         DUPLICATE_USER: "อีเมลหรือรหัสนักศึกษาซ้ำ",
         DUPLICATE_COURSE: "รหัสวิชาซ้ำ",
+        ALREADY_ENROLLED: "นักศึกษาคนนี้อยู่ในรายวิชาแล้ว",
+        COURSE_NOT_FOUND: "ไม่พบรายวิชาที่เลือก",
+        STUDENT_NOT_FOUND: "ไม่พบนักศึกษาที่เลือก",
         FORBIDDEN: "คุณไม่มีสิทธิ์ดำเนินการ",
       } as Record<string, string>
     )[c] || `เกิดข้อผิดพลาด: ${c}`

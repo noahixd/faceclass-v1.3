@@ -679,9 +679,30 @@ tr.verified td:first-child {
 .searchRow input {
   flex: 1;
 }
+.searchRow > div {
+  flex: 1;
+}
+.searchRow > div input {
+  width: 100%;
+}
+.searchRow > div small {
+  display: block;
+  margin-top: 8px;
+  color: #8f8f8f;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
 .searchRow span {
   font-size: 10px;
   color: #777;
+}
+.studentActionNotice {
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border: 1px solid #46511e;
+  background: #171b0d;
+  color: var(--acid);
+  font-size: 11px;
 }
 .studentGrid {
   display: grid;
@@ -735,6 +756,24 @@ tr.verified td:first-child {
   color: #ff817a;
   font-size: 9px;
   padding: 8px;
+}
+.enrollButton {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border: 1px solid #66752a;
+  background: #1b2110;
+  color: var(--acid);
+  font-size: 9px;
+  padding: 8px;
+}
+.enrollButton:hover:not(:disabled) {
+  border-color: var(--acid);
+  box-shadow: 0 0 14px rgb(213 255 69 / 14%);
+}
+.enrollButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 .identity {
   display: flex;

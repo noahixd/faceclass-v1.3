@@ -32,6 +32,44 @@ def test_complete_attendance_flow_and_errors():
         assert len(courses) == 1
         course_id = courses[0]["id"]
 
+        created = client.post(
+            "/users",
+            headers=auth(teacher),
+            json={
+                "email": "enroll-test@example.com",
+                "name": "Enrollment Test",
+                "role": "student",
+                "password": "FaceClass123!",
+                "student_code": "65999999",
+                "program": "Computer Science",
+            },
+        )
+        assert created.status_code == 201
+        new_student_id = created.json()["id"]
+        enrollment = client.post(
+            f"/courses/{course_id}/students/{new_student_id}",
+            headers=auth(teacher),
+            json={},
+        )
+        assert enrollment.status_code == 204
+        dashboard = client.get(f"/courses/{course_id}/dashboard", headers=auth(teacher)).json()
+        assert new_student_id in {row["id"] for row in dashboard["students"]}
+        assert client.post(
+            f"/courses/{course_id}/students/{new_student_id}",
+            headers=auth(teacher),
+            json={},
+        ).status_code == 409
+        assert client.post(
+            f"/courses/missing-course/students/{new_student_id}",
+            headers=auth(teacher),
+            json={},
+        ).status_code == 404
+        assert client.post(
+            f"/courses/{course_id}/students/missing-student",
+            headers=auth(teacher),
+            json={},
+        ).status_code == 404
+
         opened = client.post(f"/courses/{course_id}/sessions", headers=auth(teacher), json={"late_after_minutes": 0})
         assert opened.status_code == 201
         session = opened.json()
