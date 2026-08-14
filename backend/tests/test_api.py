@@ -80,6 +80,9 @@ def test_complete_attendance_flow_and_errors():
         recognized = client.post("/recognitions", headers={"X-Camera-Token": session["camera_token"]}, json={"session_id": session["id"], "student_id": "u-student-1", "confidence": 0.96})
         assert recognized.status_code == 201
         assert recognized.json()["status"] in {"present", "late"}
+        notifications = client.get("/notifications", headers=auth(student))
+        assert notifications.status_code == 200
+        assert notifications.json()[0]["message"] == "เช็คชื่อสำเร็จ วิชา CS401 — ปัญญาประดิษฐ์"
         assert client.post("/recognitions", headers={"X-Camera-Token": session["camera_token"]}, json={"session_id": session["id"], "student_id": "u-student-1", "confidence": 0.96}).status_code == 409
 
         history = client.get("/me/attendance", headers=auth(student))

@@ -357,7 +357,13 @@ def close_session(session_id: str, user=Depends(allow("admin", "teacher"))):
 
 def record_recognition(payload: Recognition, camera_token: str):
     with db() as connection:
-        session = connection.execute("SELECT * FROM sessions WHERE id=? AND closed_at IS NULL", (payload.session_id,)).fetchone()
+        session = connection.execute(
+            """SELECT s.*, c.code AS course_code, c.name AS course_name
+               FROM sessions s
+               JOIN courses c ON c.id=s.course_id
+               WHERE s.id=? AND s.closed_at IS NULL""",
+            (payload.session_id,),
+        ).fetchone()
         if not session:
             raise HTTPException(409, "SESSION_CLOSED")
         expected = hashlib.sha256(camera_token.encode()).hexdigest()
@@ -372,7 +378,8 @@ def record_recognition(payload: Recognition, camera_token: str):
         try:
             status = "late" if session["late_after_at"] and now > session["late_after_at"] else "present"
             connection.execute("INSERT INTO attendance(id,session_id,student_id,recognized_at,confidence,source,status) VALUES(?,?,?,?,?,'face',?)", (secrets.token_hex(8), payload.session_id, payload.student_id, now, payload.confidence, status))
-            connection.execute("INSERT INTO notifications VALUES(?,?,?,?,NULL)", (secrets.token_hex(8), payload.student_id, "เช็คชื่อสำเร็จ ระบบบันทึกการเข้าเรียนแล้ว", now))
+            message = f"เช็คชื่อสำเร็จ วิชา {session['course_code']} — {session['course_name']}"
+            connection.execute("INSERT INTO notifications VALUES(?,?,?,?,NULL)", (secrets.token_hex(8), payload.student_id, message, now))
         except sqlite3.IntegrityError:
             raise HTTPException(409, "DUPLICATE_ATTENDANCE")
     return {"status": status, "recognized_at": now}
@@ -454,5 +461,24 @@ def attendance_history(user=Depends(allow("student"))):
 @app.get("/notifications")
 def notifications(user=Depends(current_user)):
     with db() as connection:
-        rows = connection.execute("SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 20", (user["id"],)).fetchall()
-    return [dict(row) for row in rows]
+        rows = connection.execute(
+            """SELECT n.*, c.code AS course_code, c.name AS course_name
+               FROM notifications n
+               LEFT JOIN attendance a
+                 ON a.student_id=n.user_id AND a.recognized_at=n.created_at
+               LEFT JOIN sessions s ON s.id=a.session_id
+               LEFT JOIN courses c ON c.id=s.course_id
+               WHERE n.user_id=?
+               ORDER BY n.created_at DESC
+               LIMIT 20""",
+            (user["id"],),
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        if item.pop("course_code") and item.get("course_name"):
+            item["message"] = f"เช็คชื่อสำเร็จ วิชา {row['course_code']} — {item.pop('course_name')}"
+        else:
+            item.pop("course_name", None)
+        result.append(item)
+    return result
