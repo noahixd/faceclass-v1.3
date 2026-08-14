@@ -1130,122 +1130,144 @@ function StudentViews({
     );
   return (
     <>
-      <section className="studentHero">
-        <div>
-          <p className="kicker">STUDENT ID / {user.student_code}</p>
-          <h2>{user.name}</h2>
-          <p>ผลการเข้าเรียนรายวิชาของฉัน</p>
-        </div>
-        <div className="score">
-          {history.filter((h) => h.status !== "absent").length}
-          <span>ครั้ง</span>
-        </div>
-      </section>
-      <section className="studentCourseSummary" aria-labelledby="course-summary-title">
-        <div className="panelTitle">
-          <div>
-            <small>COURSE SUMMARY</small>
-            <h2 id="course-summary-title">สรุปการเข้าเรียนแยกรายวิชา</h2>
+      {section === "overview" && (
+        <>
+          <section className="studentHero">
+            <div>
+              <p className="kicker">STUDENT ID / {user.student_code}</p>
+              <h2>{user.name}</h2>
+              <p>ผลการเข้าเรียนรายวิชาของฉัน</p>
+            </div>
+            <div className="score">
+              {history.filter((h) => h.status !== "absent").length}
+              <span>ครั้ง</span>
+            </div>
+          </section>
+          <section
+            className="studentCourseSummary"
+            aria-labelledby="course-summary-title"
+          >
+            <div className="panelTitle">
+              <div>
+                <small>COURSE SUMMARY</small>
+                <h2 id="course-summary-title">สรุปการเข้าเรียนแยกรายวิชา</h2>
+              </div>
+              <div className="count">
+                {summaries.length}
+                <span> วิชา</span>
+              </div>
+            </div>
+            <div className="courseSummaryGrid">
+              {summaries.map((course) => {
+                const attended = course.present + course.late;
+                const rate = course.total
+                  ? Math.round((attended / course.total) * 100)
+                  : 0;
+                return (
+                  <article className="courseSummaryCard" key={course.code}>
+                    <header>
+                      <div>
+                        <small>{course.code}</small>
+                        <h3>{course.name}</h3>
+                      </div>
+                      <strong>{rate}%</strong>
+                    </header>
+                    <div
+                      className="courseSummaryBar"
+                      aria-label={`อัตราเข้าเรียน ${rate}%`}
+                    >
+                      <i style={{ width: `${rate}%` }} />
+                    </div>
+                    <dl>
+                      <div>
+                        <dt>มาเรียน</dt>
+                        <dd>{course.present}</dd>
+                      </div>
+                      <div>
+                        <dt>มาสาย</dt>
+                        <dd className={course.late ? "lateText" : ""}>
+                          {course.late}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>ขาดเรียน</dt>
+                        <dd className={course.absent ? "absence" : ""}>
+                          {course.absent}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>ทั้งหมด</dt>
+                        <dd>{course.total}</dd>
+                      </div>
+                    </dl>
+                  </article>
+                );
+              })}
+            </div>
+            {!summaries.length && (
+              <div className="empty">
+                ยังไม่มีข้อมูลการเข้าเรียนสำหรับสรุปรายวิชา
+              </div>
+            )}
+          </section>
+        </>
+      )}
+      {section === "attendance" && (
+        <section className="dataPanel">
+          <div className="panelTitle">
+            <div>
+              <small>ATTENDANCE LOG</small>
+              <h2>ประวัติการเข้าเรียนของฉัน</h2>
+            </div>
           </div>
-          <div className="count">
-            {summaries.length}
-            <span> วิชา</span>
-          </div>
-        </div>
-        <div className="courseSummaryGrid">
-          {summaries.map((course) => {
-            const attended = course.present + course.late;
-            const rate = course.total
-              ? Math.round((attended / course.total) * 100)
-              : 0;
-            return (
-              <article className="courseSummaryCard" key={course.code}>
-                <header>
-                  <div>
-                    <small>{course.code}</small>
-                    <h3>{course.name}</h3>
-                  </div>
-                  <strong>{rate}%</strong>
-                </header>
-                <div className="courseSummaryBar" aria-label={`อัตราเข้าเรียน ${rate}%`}>
-                  <i style={{ width: `${rate}%` }} />
-                </div>
-                <dl>
-                  <div>
-                    <dt>มาเรียน</dt>
-                    <dd>{course.present}</dd>
-                  </div>
-                  <div>
-                    <dt>มาสาย</dt>
-                    <dd className={course.late ? "lateText" : ""}>{course.late}</dd>
-                  </div>
-                  <div>
-                    <dt>ขาดเรียน</dt>
-                    <dd className={course.absent ? "absence" : ""}>{course.absent}</dd>
-                  </div>
-                  <div>
-                    <dt>ทั้งหมด</dt>
-                    <dd>{course.total}</dd>
-                  </div>
-                </dl>
-              </article>
-            );
-          })}
-        </div>
-        {!summaries.length && (
-          <div className="empty">ยังไม่มีข้อมูลการเข้าเรียนสำหรับสรุปรายวิชา</div>
-        )}
-      </section>
-      <section className="dataPanel">
-        <div className="panelTitle">
-          <div>
-            <small>ATTENDANCE LOG</small>
-            <h2>ประวัติการเข้าเรียนของฉัน</h2>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>COURSE</th>
-              <th>DATE</th>
-              <th>TIME</th>
-              <th>STATUS</th>
-              <th>CONFIDENCE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((h, i) => (
-              <tr className={h.status !== "absent" ? "verified" : ""} key={i}>
-                <td>
-                  <b>{h.name}</b>
-                  <small>{h.code}</small>
-                </td>
-                <td>
-                  {new Date(h.recognized_at * 1000).toLocaleDateString("th-TH")}
-                </td>
-                <td>
-                  {new Date(h.recognized_at * 1000).toLocaleTimeString("th-TH")}
-                </td>
-                <td>
-                  <span className={`status ${h.status}`}>
-                    {h.status === "present"
-                      ? "● มาเรียน"
-                      : h.status === "late"
-                        ? "● มาสาย"
-                        : "● ขาดเรียน"}
-                  </span>
-                </td>
-                <td>
-                  {h.confidence ? `${Math.round(h.confidence * 100)}%` : "—"}
-                </td>
+          <table>
+            <thead>
+              <tr>
+                <th>COURSE</th>
+                <th>DATE</th>
+                <th>TIME</th>
+                <th>STATUS</th>
+                <th>CONFIDENCE</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {!history.length && (
-          <div className="empty">ยังไม่มีประวัติการเข้าเรียน</div>
-        )}
-      </section>
+            </thead>
+            <tbody>
+              {history.map((h, i) => (
+                <tr className={h.status !== "absent" ? "verified" : ""} key={i}>
+                  <td>
+                    <b>{h.name}</b>
+                    <small>{h.code}</small>
+                  </td>
+                  <td>
+                    {new Date(h.recognized_at * 1000).toLocaleDateString(
+                      "th-TH",
+                    )}
+                  </td>
+                  <td>
+                    {new Date(h.recognized_at * 1000).toLocaleTimeString(
+                      "th-TH",
+                    )}
+                  </td>
+                  <td>
+                    <span className={`status ${h.status}`}>
+                      {h.status === "present"
+                        ? "● มาเรียน"
+                        : h.status === "late"
+                          ? "● มาสาย"
+                          : "● ขาดเรียน"}
+                    </span>
+                  </td>
+                  <td>
+                    {h.confidence ? `${Math.round(h.confidence * 100)}%` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!history.length && (
+            <div className="empty">ยังไม่มีประวัติการเข้าเรียน</div>
+          )}
+        </section>
+      )}
     </>
   );
 }
