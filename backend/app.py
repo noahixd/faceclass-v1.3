@@ -279,11 +279,9 @@ def list_students(q: str = Query("", max_length=100), user=Depends(allow("teache
 
 
 @app.post("/users", status_code=201)
-def create_user(payload: UserIn, user=Depends(allow("admin", "teacher"))):
+def create_user(payload: UserIn, user=Depends(allow("admin"))):
     if payload.role not in {"admin", "teacher", "student"}:
         raise HTTPException(422, "INVALID_ROLE")
-    if user["role"] == "teacher" and payload.role != "student":
-        raise HTTPException(403, "FORBIDDEN")
     user_id = secrets.token_hex(8)
     try:
         with db() as connection:

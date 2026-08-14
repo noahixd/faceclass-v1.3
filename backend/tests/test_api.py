@@ -27,14 +27,20 @@ def test_complete_attendance_flow_and_errors():
         assert client.get("/courses").status_code == 401
 
         teacher = login(client, "teacher@example.com")
+        admin = login(client, "admin@example.com")
         student = login(client, "student@example.com")
         courses = client.get("/courses", headers=auth(teacher)).json()
         assert len(courses) == 1
         course_id = courses[0]["id"]
+        assert client.post(
+            "/courses",
+            headers=auth(teacher),
+            json={"code": "CS499", "name": "Teacher Created Course", "room": "Lab 9"},
+        ).status_code == 201
 
         created = client.post(
             "/users",
-            headers=auth(teacher),
+            headers=auth(admin),
             json={
                 "email": "enroll-test@example.com",
                 "name": "Enrollment Test",
@@ -46,6 +52,20 @@ def test_complete_attendance_flow_and_errors():
         )
         assert created.status_code == 201
         new_student_id = created.json()["id"]
+        assert client.post(
+            "/users",
+            headers=auth(teacher),
+            json={
+                "email": "teacher-cannot-create@example.com",
+                "name": "Forbidden Student",
+                "role": "student",
+                "password": "FaceClass123!",
+                "student_code": "65999998",
+                "program": "Computer Science",
+            },
+        ).status_code == 403
+        visible_students = client.get("/students", headers=auth(teacher)).json()
+        assert new_student_id in {row["id"] for row in visible_students}
         enrollment = client.post(
             f"/courses/{course_id}/students/{new_student_id}",
             headers=auth(teacher),

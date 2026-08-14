@@ -397,8 +397,13 @@ function App({
               courses={courses}
               courseId={courseId}
               setCourseId={setCourseId}
+              role={user.role}
               openCourse={() => setModal("course")}
-              openStudent={() => setModal("student")}
+              openStudent={() =>
+                user.role === "admin"
+                  ? setModal("student")
+                  : setSection("students")
+              }
             />
             {section === "overview" && (
               <Overview
@@ -460,7 +465,6 @@ function App({
         <Modal
           type={modal}
           token={token}
-          courseId={courseId}
           close={() => setModal(null)}
           done={async () => {
             setModal(null);
@@ -478,12 +482,14 @@ function TeacherToolbar({
   courses,
   courseId,
   setCourseId,
+  role,
   openCourse,
   openStudent,
 }: {
   courses: Course[];
   courseId: string;
   setCourseId: (v: string) => void;
+  role: User["role"];
   openCourse: () => void;
   openStudent: () => void;
 }) {
@@ -504,7 +510,9 @@ function TeacherToolbar({
           + สร้างรายวิชา
         </button>
         <button className="quiet" onClick={openStudent}>
-          + เพิ่มนักศึกษา
+          {role === "admin"
+            ? "+ เพิ่มนักศึกษาเข้าสู่ระบบ"
+            : "+ เพิ่มนักศึกษาเข้ารายวิชา"}
         </button>
       </div>
     </section>
@@ -1345,13 +1353,11 @@ function Metric({
 function Modal({
   type,
   token,
-  courseId,
   close,
   done,
 }: {
   type: "course" | "student";
   token: string;
-  courseId: string;
   close: () => void;
   done: () => void;
 }) {
@@ -1370,7 +1376,7 @@ function Modal({
           }),
         });
       else {
-        const c = await request("/users", token, {
+        await request("/users", token, {
           method: "POST",
           body: JSON.stringify({
             email: f.get("email"),
@@ -1380,10 +1386,6 @@ function Modal({
             student_code: f.get("code"),
             program: f.get("program"),
           }),
-        });
-        await request(`/courses/${courseId}/students/${c.id}`, token, {
-          method: "POST",
-          body: "{}",
         });
       }
       done();
@@ -1397,8 +1399,10 @@ function Modal({
         <button type="button" className="x" onClick={close}>
           ×
         </button>
-        <small>{type === "course" ? "CREATE COURSE" : "ENROLL STUDENT"}</small>
-        <h2>{type === "course" ? "สร้างรายวิชา" : "เพิ่มนักศึกษา"}</h2>
+        <small>{type === "course" ? "CREATE COURSE" : "CREATE STUDENT"}</small>
+        <h2>
+          {type === "course" ? "สร้างรายวิชา" : "เพิ่มนักศึกษาเข้าสู่ระบบ"}
+        </h2>
         {type === "course" ? (
           <>
             <label>
