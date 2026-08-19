@@ -49,17 +49,17 @@ def seed(connection):
     password = PH.hash(os.getenv("FACECLASS_DEMO_PASSWORD", "FaceClass123!"))
     users = [
         ("u-admin", "admin@example.com", "ผู้ดูแลระบบ", "admin", password, None, None, 1),
-        ("u-teacher", "teacher@example.com", "อาจารย์อนันต์", "teacher", password, None, None, 1),
-        ("u-student-1", "student@example.com", "ณัฐชา วัฒนกุล", "student", password, "65010001", "วิทยาการคอมพิวเตอร์", 1),
-        ("u-student-2", "student2@example.com", "ธนกฤต พงษ์ไพบูลย์", "student", password, "65010002", "วิทยาการคอมพิวเตอร์", 1),
-        ("u-student-3", "student3@example.com", "พิมพ์ชนก ศรีสุข", "student", password, "65010003", "เทคโนโลยีสารสนเทศ", 1),
+        ("u-teacher", "teacher@example.com", "อาจารย์ทดลอง", "teacher", password, None, None, 1),
+        ("u-student-1", "student@example.com", "นักศึกษาทดลอง 1", "student", password, "65010001", "วิทยาการคอมพิวเตอร์", 1),
+        ("u-student-2", "student2@example.com", "นักศึกษาทดลอง 2", "student", password, "65010002", "วิทยาการคอมพิวเตอร์", 1),
+        ("u-student-3", "student3@example.com", "นักศึกษาทดลอง 3", "student", password, "65010003", "เทคโนโลยีสารสนเทศ", 1),
     ]
     connection.executemany("INSERT INTO users(id,email,name,role,password_hash,student_code,program,active) VALUES(?,?,?,?,?,?,?,?)", users)
     connection.execute("INSERT INTO courses VALUES(?,?,?,?,?)", ("course-ai", "CS401", "ปัญญาประดิษฐ์", "u-teacher", "Lab 4"))
     connection.executemany("INSERT INTO enrollments VALUES(?,?)", [("course-ai", row[0]) for row in users[2:]])
 
 
-def migrate_and_add_face_profiles(connection):
+def migrate_schema(connection):
     columns = {row[1] for row in connection.execute("PRAGMA table_info(users)").fetchall()}
     if "photo_url" not in columns:
         connection.execute("ALTER TABLE users ADD COLUMN photo_url TEXT")
@@ -69,14 +69,6 @@ def migrate_and_add_face_profiles(connection):
     attendance_columns = {row[1] for row in connection.execute("PRAGMA table_info(attendance)").fetchall()}
     if "status" not in attendance_columns:
         connection.execute("ALTER TABLE attendance ADD COLUMN status TEXT NOT NULL DEFAULT 'present'")
-    password = PH.hash(os.getenv("FACECLASS_DEMO_PASSWORD", "FaceClass123!"))
-    students = [
-        ("u-student-je", "je@example.com", "เจ", "student", password, "65010004", "วิทยาการคอมพิวเตอร์", 1, "/students/je.jpg"),
-        ("u-student-nut", "nut@example.com", "นัท", "student", password, "65010005", "วิทยาการคอมพิวเตอร์", 1, "/students/nut.jpg"),
-    ]
-    connection.executemany("INSERT OR IGNORE INTO users(id,email,name,role,password_hash,student_code,program,active,photo_url) VALUES(?,?,?,?,?,?,?,?,?)", students)
-    if connection.execute("SELECT 1 FROM courses WHERE id='course-ai'").fetchone():
-        connection.executemany("INSERT OR IGNORE INTO enrollments(course_id,student_id) VALUES('course-ai',?)", [(row[0],) for row in students])
 
 
 @asynccontextmanager
@@ -85,7 +77,7 @@ async def lifespan(_app):
         for statement in SCHEMA:
             connection.execute(statement)
         seed(connection)
-        migrate_and_add_face_profiles(connection)
+        migrate_schema(connection)
     yield
 
 

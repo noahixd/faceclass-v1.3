@@ -807,7 +807,7 @@ function CameraScanner({
         )}
         <div className="cameraFacts">
           <span>ภาพส่งเข้าประมวลผลภายในเครื่องเท่านั้น</span>
-          <span>เทียบกับ embedding จริงของเจและนัท</span>
+          <span>เทียบกับ embedding ใบหน้าที่ลงทะเบียนไว้ในเครื่อง</span>
         </div>
         {sessionId && state === "error" && (
           <button className="accentButton" onClick={start}>
